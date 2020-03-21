@@ -1,0 +1,126 @@
+
+DNS (Domain Name System)
+
+Types of DNS servers:
+
+    Recursive resolvers
+    Root DNS servers
+    Top-level DNS servers
+    Authoritative DNS servers
+
+Recursive resolvers
+
+Responds for requests from clients and tracks down DNS record. Usually provided by ISP, other examples: Google (8.8.8.8, 8.8.4.4), OpenDNS. It uses iterative or recursive types of queries to find domain's IP address by quering root and top-level servers. Uses cache to store query results for future use.
+Root servers
+
+Responsible for root domain (labelled as an empty string), return addresses of top-level servers (e.g. .com, .org, .pl).
+
+There are 13 logical root servers named from a.root-servers.net to m.root-servers.net. However, there are more than 600 physical servers in different locations which use anycast routing to distribute requests based on load and proximity.
+
+List of root-servers: http://www.root-servers.org/
+Top-level servers
+
+Maintain information about top-level domains (ccTLD - country codes, gTLD - generic). For example for com. domain these are a.gtld-servers.net. to m.gtld-servers.net..
+Authoritative servers
+
+Contain information specific to the domain name it serves.
+
+
+## DNS records
+
+A - IPv4
+
+AAAA - IPv6
+
+CNAME - canonical name this name is alias for
+
+MX - mail service
+
+NS - authoritative DNS servers for this domain
+
+TXT - text record (used to associate arbitrary text with domain)
+
+PTR - pointer record, used for reverse lookup, added to reverse zone (e.g. 0.168.192.in-addr.arpa)
+
+## host
+
+# simple lookup
+host google.com
+
+# specify query type (NS record here)
+host -t ns google.com
+
+# show all records
+host -t any google.com
+
+# show all records, use verbose format
+host -a google.com
+
+# query particular name server
+host google.com ns1.google.com
+
+# non-recursive query (DNS server won't try to resolve name if it doesn't know it)
+host -r en.wikipedia.org 8.8.8.8
+
+# more verbose output
+host -v google.com
+
+# wait 2 seconds for response
+host -W 2 google.com
+
+# wait forever for response
+host -w google.com
+
+## nslookup
+
+# simple lookup
+nslookup google.com
+
+# query particular name server
+nslookup google.com 8.8.8.8
+
+# specify query type (NS record here)
+nslookup -type=ns google.com
+# or:
+nslookup -query=ns google.com
+
+# get all available records
+nslookup -type=any google.com
+
+# reverse lookup
+nslookup 10.20.30.40
+
+# set timeout
+nslookup -timeout=20 google.com
+
+## dig
+
+# simple lookup
+dig google.com
+
+# short output
+dig google.com +short
+
+# query particular name server
+dig @8.8.8.8 google.com
+
+# specify query type (NS record here)
+dig google.com NS
+
+# get all available records
+dig google.com ANY
+
+# get names servers for "com." domain
+dig +short com ns
+
+# (default) get names servers for "." domain
+dig
+
+# reverse lookup
+dig -x 216.58.204.78
+
+# trace lookup
+dig google.com +trace
+
+# set timeout
+dig google.com +time=10
