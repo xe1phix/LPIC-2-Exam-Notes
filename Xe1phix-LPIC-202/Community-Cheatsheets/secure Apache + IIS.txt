@@ -1,0 +1,190 @@
+اختبار الاباتشي وتحمل الموقع
+Load, Stress and Performance Testing / Load/Stress Test Web Applications
+应用层DDoS攻击模拟器 – DDOSIM (Application-layer DDoS attacks simulator - DDOSIM)
+DDOSIM made written in C ++ and runs on the Linux system, features include:
+HTTP DDOS attack normal request request
+HTTP DDOS attack exception request request
+SMTP DDOS attack
+TCP connection attacks against different ports  
+Fastream Web Stress Tester 4 0
+
+
+
+
+Content-Security-Policy: script-src 'self'
+X-XSS-Protection
+X-Frame-Options
+Strict-Transport-Security
+X-Content-Type-Options	
+Content-Security-Policy, X-Content-Security-Policy, X-WebKit-CSP	
+
+
+
+secure shairpoint :
+https://blogs.msdn.microsoft.com/fabdulwahab/2015/08/15/security-protecting-sharepoint-server-applications/
+https://praveensharepointknowledgebase.wordpress.com/2015/06/18/new-button-disabled-in-sharepoint-central-administration/ 
+
+
+How to reduce vulnerability from Asp.net :
+http://www.asptricks.net/2016/01/how-to-reduce-vulnerability-from-aspnet.html
+
+
+
+Remove Unwanted HTTP Response Headers iis :
+https://blogs.msdn.microsoft.com/varunm/2013/04/23/remove-unwanted-http-response-headers/
+
+Remove Unwanted HTTP Response Headers Apache :
+http://www.shanison.com/2012/07/05/unset-apache-response-header-protect-your-server-information/
+=================================================
+secure from Slow HTTP Denial of Service Attack
+https://documentation.cpanel.net/display/EA/How+To+Mitigate+Slowloris+Attacks
+http://linuxpitstop.com/clickjacking-and-slowloris-attacks-on-centos/
+ install ModReqtimeout + ModQoS
+update httpd.conf 
+=================================================
+2- 1- Cross Site Scripting (XSS) 
+First Implement xss protraction on header  :
+https://kb.sucuri.net/warnings/hardening/headers-x-xss-protection 
+http://insiderattack.blogspot.com/2014/03/apache-security-configuring-secure.html
+
+also active WAF like F5 or cisco , or forward traffic to CLOUD DNS Like incapsula.com or cloudflare.com ,or contact to drupl and see this article
+http://resources.infosecinstitute.com/15-security-modules-for-drupal-to-make-website-secure/ 
+more : https://www.owasp.org/index.php/List_of_useful_HTTP_headers
+check online header security :
+https://securityheaders.io
+
+=================================================
+2- OPTIONS method
+https://sureshk37.wordpress.com/2014/10/01/how-to-disable-apache-http-options-method/
+https://support.pivotal.io/hc/en-us/articles/202654078-How-to-disable-HTTP-TRACE-for-Apache-httpd-Pivotal-Web-Server-and-How-to-test-HTTP-TRACE
+http://www.techstacks.com/howto/disable-http-methods-in-apache.html
+=================================================
+4- directory listing not done (  )
+https://aristomagnus.wordpress.com/2009/01/22/how-to-disable-directory-listing-on-apache-centos-52/
+http://crybit.com/disable-directory-listing-rhelcentos-server/
+=================================================
+5- Encryption Not Enforced + HTTP Strict Transport Security
+
+http://opentodo.net/2012/10/enable-http-strict-transport-security-in-apache-nginx/
+http://linux-audit.com/configure-hsts-http-strict-transport-security-apache-nginx/
+https://www.lowendtalk.com/discussion/10021/tutorial-http-strict-transport-security-setup-on-apache-nginx-and-lighttpd
+http://opentodo.net/2012/10/enable-http-strict-transport-security-in-apache-nginx/
+https://raymii.org/s/tutorials/HTTP_Strict_Transport_Security_for_Apache_NGINX_and_Lighttpd.html
+
+
+Slides about secure :
+http://www.slideshare.net/dnkolegov/codefest2015
+
+
+directory listen iis :
+https://technet.microsoft.com/en-us/library/cc731109(v=ws.10).aspx
+
+
+xss apache :
+http://www.unixpearls.com/how-to-block-xss-vulnerability-cross-site-scripting-in-apache-2-2-x/
+http://scx050d06a.blogspot.com/2013/10/secure-apache-web-server-from-xss-attack.html
+https://geekflare.com/apache-web-server-hardening-security/ 
+https://www.perpetual-beta.org/weblog/security-headers.html
+
+
+secure apache from common vuln :
+https://pentest2pwn.wordpress.com/2015/03/24/apache-server-hardening-guidlines/
+http://kb.odin.com/en/127829
+https://geekflare.com/secure-apache-from-clickjacking-with-x-frame-options/
+https://geekflare.com/httponly-secure-cookie-apache/
+https://geekflare.com/apache-web-server-hardening-security/
+https://geekflare.com/secure-mime-types-in-apache-nginx-with-x-content-type-options/
+https://geekflare.com/10-best-practices-to-secure-and-harden-your-apache-web-server/
+https://www.perpetual-beta.org/weblog/security-headers.html
+
+
+IIS SECURE :
+https://scotthelme.co.uk/hardening-your-http-response-headers/
+http://insiderattack.blogspot.com/2014/04/configuring-secure-iis-response-headers.html
+http://www.dotnetnoob.com/2012/09/security-through-http-response-headers.html
+http://www.troyhunt.com/2012/02/shhh-dont-let-your-response-headers.html
+https://mendel129.wordpress.com/2016/02/19/quickfix-iis-header-security/
+
+
+1- Insecure Transportation Security Protocol Supported (SSLv3)
+
+find httpd-ssl.conf by this command 
+
+# locate httpd-ssl.conf OR locate ssl.conf OR locate httpd.conf
+
+find SSLProtocol and change it to : 
+
+SSLProtocol All -SSLv2 -SSLv3
+SSLHonorCipherOrder On
+SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
+
+
+
+https://access.redhat.com/solutions/1232413
+http://geekflare.com/test-freak-attack-cve-2015-0204-and-fix/
+
+you have to find ssl configuration file to change , open all files .conf in apache and ssl and find "SSLCipherSuit"
+
+# locate httpd-ssl.conf OR locate ssl.conf OR locate httpd.conf
+
+if you find it change value to 
+
+make it look like this 
+
+SSLProtocol All -SSLv2 -SSLv3
+SSLHonorCipherOrder On
+SSLCipherSuite ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
+
+
+other Patch of Apache :
+
+Important 
+
+http://geekflare.com/10-best-practices-to-secure-and-harden-your-apache-web-server/
+
+Important 
+
+http://geekflare.com/apache-web-server-hardening-security/
+
+only focus what value should add in Apache configuration , take backup for files before change.
+
+
+if you want to have more security on SBG Website , install CLAMAV (antivirus) and Mod Security ,I recommend you install Mod Security on web server and active some rules to protect web server from all types of attacks .
+
+after install mod security try to check if is it work or no :
+http://www.xxxx.com/?abc=../../
+http://domain.tld/index.php?id=/etc/passwd
+http://www.example.com/index.php?id="><script>alert(document.cookie)</script>
+
+mod security will block this request to sbg website and create logs to check who try to hack website.
+
+for ddos attack install mod_evasive and 
+
+https://documentation.cpanel.net/display/EA/How+To+Mitigate+Slowloris+Attacks
+https://panel.bullten.net/knowledgebase/3/Installing-ModAntiloris-To-Mitigate-SlowLoris-DOS-Attack.html
+
+
+2- Version Disclosure (PHP)
+http://www.reecefowell.com/2012/10/01/hardening-php-through-php-ini-configuration-file/ 
+
+change this value in php.ini 
+
+
+display_errors = Off
+
+log_errors = On
+
+allow_url_fopen = Off
+
+safe_mode = On
+
+expose_php = Off
+
+enable_dl = Off
+
+disable_functions = system, show_source, symlink, exec, dl, shell_exec, passthru, phpinfo, escapeshellarg, escapeshellcmd
+   
+
+Links :
+http://www.petefreitag.com/item/505.cfm
+http://www.techrepublic.com/blog/10-things/10-things-you-should-do-to-secure-apache/
