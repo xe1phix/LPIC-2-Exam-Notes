@@ -1,0 +1,72 @@
+#: Title : Managing E-Mail Delivery
+#: Author : "Caio Abreu Ferreira" <abreuferr_gmail.com>
+#: Description : Managing E-Mail Delivery
+#: Options : Weight: 2
+
+Description: Candidates should be able to implement client 
+e-mail management software to filter, sort and monitor incoming 
+user e-mail.
+
+Key Knowledge Areas:
+
+Understanding of Sieve functionality, syntax and operators
+Use Sieve to filter and sort mail with respect to sender, recipient(s), headers and size
+Awareness of procmail
+Terms and Utilities:
+
+Conditions and comparison operators
+keep, fileinto, redirect, reject, discard, stop
+Dovecot vacation extension
+
+#
+# INSTALACAO
+#
+
+# atualizacao do debian.
+$ sudo apt-get update && sudo apt-get upgrade -y -d
+
+# instalacao so procmail e fetchmail
+$ sudo apt-get install procmail fetchmail -y -d
+$ sudo apt-get autoremove --purge exim4-base exim4-config exim4-daemon-light -y
+
+#
+# CONFIGURACAO - ESTACAO
+#
+
+# fetchmailrc
+$ sudo vi /etc/procmailrc
+	MAILDIR=$HOME/Maildir
+	DEFAULT=$MAILDIR/
+
+$ vi /home/[USUARIO]/.fetchmailrc
+	set logfile /home/[USUARIO]/fetchmail.log
+
+	poll email.particula.local protocol imap
+	username "[USUARIO]" password "[SENHA]"
+
+	mda "/usr/bin/procmail -d %T";
+
+# procmailrc
+$ sudo vi /home/[USUARIO]/.procmailrc
+	# variaveis de ambiente.
+	SHELL = /bin/zsh
+	PATH = /usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+
+	MAILDIR = $HOME/Maildir/
+	DEFAULT = $MAILDIR/
+	LOGFILE = $HOME/procmail.log
+
+	VERBOSE = "yes"
+
+	:0
+	* ^Subject.*SPAM
+	$MAILDIR/spam/
+
+	:0
+	* ^(To|Cc).*cosmo@particula
+	$MAILDIR/inbox/
+
+# fetchmail
+$ mkdir /home/[USUARIO]/Maildir
+
+$ fetchmail -vk

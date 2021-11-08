@@ -1,0 +1,39 @@
+# Limiting access to local networks only
+acl "clients" {
+	192.168.0.0/24;
+	localhost;
+	localnets;
+};
+
+options {
+	listen-on port 53 { any; };
+	listen-on-v6 { none; };
+	directory "/etc/bind";
+
+	# Maximum number of simultaneous client TCP connections to accept
+	tcp-clients 50;
+
+	# Disable built-in server information zones
+	version none;
+	hostname none;
+	server-id none;
+
+	# Attempt to do all the work required to answer the query
+	recursion yes;
+	allow-recursion { clients; };
+	allow-query { clients; };
+
+	# Only LAN users are allowed to receive zone transfers from the server
+	allow-transfer { clients; };
+
+	# o processo de resolucao sera transferido para os servidores ns1 e ns2
+	forwarders {192.168.0.5; 192.168.0.6;};
+
+	forward only;
+
+	# dnssec
+	dnssec-enable yes;
+	dnssec-validation yes;
+
+	auth-nxdomain no;
+};

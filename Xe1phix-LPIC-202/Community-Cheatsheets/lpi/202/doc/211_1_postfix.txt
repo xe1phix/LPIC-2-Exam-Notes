@@ -1,0 +1,216 @@
+#: Title : E-Mail Services
+#: Author : "Caio Abreu Ferreira" <abreuferr_gmail.com>
+#: Description : Using e-mail servers
+#: Options : Weight: 4
+
+Description: Candidates should be able to manage an e-mail 
+server, including the configuration of e-mail aliases, e-mail 
+quotas and virtual e-mail domains. This objective includes 
+configuring internal e-mail relays and monitoring e-mail servers.
+
+Key Knowledge Areas:
+- Configuration files for postfix
+- Basic TLS configuration for postfix
+- Basic knowledge of the SMTP protocol
+- Awareness of sendmail and exim
+
+Terms and Utilities:
+- Configuration files and commands for postfix
+- /etc/postfix/
+- /var/spool/postfix/
+- sendmail emulation layer commands
+- /etc/aliases
+- mail-related logs in /var/log/
+
+#
+# INSTALACAO
+#
+
+# atualizacao do gnu/linux debian
+$ sudo apt-get update
+$ sudo apt-get upgrade -y -d
+
+# instalacao do postfix
+$ sudo apt-get install postfix mailutils telnet -y -d
+
+#
+# CONFIGURACAO
+#
+
+# backup
+$ cp /etc/postfix/main.cf{,.origin}
+
+# reconfigurando o postfix
+$ sudo dpkg-reconfigure postfix
+	General type of mail configuration? - internet site
+	System mail name - email.particula.local
+	Root and postmaster mail recipient - cosmo
+	Other destinations to accept mail for - $myhostname, email.particula.local, localhost.particula.local, , localhost
+	Force synchronous updates on mail queue? - <No>
+	Local networks - 127.0.0.0/8
+	Mailbox size limit - 0
+	Local address extension character - +
+	Internet protocols to use - all
+
+# opcao - home_mailbox
+# ativar a caixa de amramzenamento dos e-mails
+# do tipo Maildir
+#
+$ sudo postconf -e 'home_mailbox = Maildir/'
+$ sudo postconf -e "mailbox_command = "
+
+# opcao - virtual_alias_maps
+#
+# desta forma, e-mail enviado para support@particula.local sera
+# redirecionado para cosmo@particula.local.
+#
+$ sudo postconf -e 'virtual_alias_maps= hash:/etc/postfix/virtual'
+$ sudo vi /etc/postfix/virtual
+	cosmo@particula.local cosmo
+	support@particula.local cosmo
+	postmaster@particula.local cosmo
+	root@particula.local root
+$ sudo postmap /etc/postfix/virtual
+$ cat /home/COSMO/Maildir/new/1561572469.Vfe04I40050M850395.email
+	To: <support@particula.local>
+	X-Mailer: mail (GNU Mailutils 3.1.1)
+	Message-Id: <20190626180749.CCC437F8@email.particula.local>
+	Date: Wed, 26 Jun 2019 15:07:49 -0300 (-03)
+	From: root@particula.local (root)
+
+# opcao - sender_canonical_maps 
+#
+# o Postfix ira re-escrever o e-mail que serao enviados.
+# do formato [USUARIO]@[HOST.DOMINIO] para [USUARIO]@[DOMINIO]
+#
+$ sudo postconf -e "sender_canonical_maps=hash:/etc/postfix/sender_canonical"
+$ sudo vi /etc/postfix/sender_canonical
+	@email.particula.local @particula.local
+$ sudo postmap hash:/etc/postfix/sender_canonical
+$ cat /ROOT/Maildir/new/1561573139.Vfe00I209c2M643368.email
+	To: <cosmo@particula.local>
+	From: root@particula.local (root)
+
+# opcao -  aliases
+# redirecionamento do e-mail de um usuario local
+# para um usuario com e-mail.
+$ sudo cat /etc/aliases
+	postmaster:    cosmo
+	admin:	cosmo
+	root: cosmo
+
+# atualizar a base de dados atraves do comando
+# newaliases.
+$ sudo newaliases
+
+# arquivo de configuracao do Postfix.
+$ sudo cat /etc/postfix/main.cf
+	# utilizado para especificar o hostname do servidor de email.
+	myhostname = email.particula.local
+
+	# utilizado para especificar o dominio do servidor de email.
+	mydomain = particula.local
+
+	# utilizado para especificar o dominio de origem ao qual todos 
+	# os emails que serao enviados.
+	myorigin = $mydomain
+
+	# utilizado para especificar os dominios que o servidor postfix 
+	# tomara como destino final.
+	mydestination = $myhostname, $mydomain, localhost.particula.local, , localhost
+
+	# utilizado para especificar quais hosts podem utilizar o
+	# Postfix como relay para enviar e-mail para outro servidor.
+	mynetworks = 192.168.0.0/24, 127.0.0.0/8
+
+	# utilizado para especificar o endereco ip do servidor de email (relay)
+	relayhost = 
+	
+	# tipo de mailbox
+	home_mailbox = Maildir/
+	mailbox_command = 
+	
+	# endereco da interface de rede que recebe email.
+	inet_interfaces = all
+
+	# especifica o tipo de protocolo, ipv4 ou ipv6 ou os dois.
+	inet_protocols = all
+
+	# aliases
+	alias_maps = hash:/etc/aliases
+	alias_database = hash:/etc/aliases
+
+	# tamanho da caixa postal.
+	mailbox_size_limit = 0
+
+	recipient_delimiter = +
+
+	# virtual domain.
+	virtual_alias_maps = hash:/etc/postfix/virtual
+
+	# alterar o cabecalho SENDER de e-mail local
+	sender_canonical_maps=hash:/etc/postfix/sender_canonical"
+
+	# bloqueio contra spam.
+	disable_vrfy_command = yes
+
+	## Seguranca
+	# Aceitar conexao apenas a partir da rede local
+	smtpd_client_restrictions = permit_mynetworks,
+        	                    reject
+ 
+	# Rejeitar conexao de clientes que nao saibam o seu hostname
+	smtpd_helo_restrictions = reject_unknown_sender_domain
+ 
+	# Rejeitar email de dominios que nao existem
+	smtpd_sender_restrictions = reject_unknown_sender_domain
+ 
+	# Clientes locais podem enviar emails para qualquer endereco
+	smtpd_recipient_restrictions = permit_mynetworks,
+       	  	                       reject_unauth_destination
+
+# testar o arquivo de configuracao.
+$ sudo postfix check 
+
+# reinicializando o servico do postfix
+$ sudo systemctl restart postfix
+
+#
+# TESTE
+#
+
+# teste 1
+$ echo "Corpo do e-mail" | mail -s "Subject do e-mail" cosmo@particula.local
+
+# teste 2
+$ telnet email.particula.local 25
+	ehlo email.particula.local
+	mail from: cosmo
+	rcpt to: cosmo
+	data
+	subject: teste
+	Mail body
+	.
+	quit
+
+# Maildir
+$ tree --charset=ascii /home/cosmo/Maildir
+	/home/cosmo/Maildir
+	|-- cur
+	|-- new
+	|   `-- 1561569730.Vfe04I40053M405895.email
+	`-- tmp
+
+$ cat /home/cosmo/Maildir/new/1561569730.Vfe04I40053M405895.email
+	Return-Path: <cosmo@email.particula.local>
+	X-Original-To: cosmo
+	Delivered-To: cosmo@email.particula.local
+	Received: from localhost (localhost [127.0.0.1])
+		by email.particula.local (Postfix) with ESMTP id 6FA067ED
+		for <cosmo>; Wed, 26 Jun 2019 14:21:37 -0300 (-03)
+	subject: 14:22
+	Message-Id: <20190626172145.6FA067ED@email.particula.local>
+	Date: Wed, 26 Jun 2019 14:21:37 -0300 (-03)
+	From: cosmo@email.particula.local
+
+	Mail body

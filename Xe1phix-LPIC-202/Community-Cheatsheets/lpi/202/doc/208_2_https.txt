@@ -1,0 +1,175 @@
+#: Title : Apache2 e HTTPS
+#: Author : "Caio Abreu Ferreira" <abreuferr_gmail.com>
+#: Description : Apache configuration for HTTPS
+#: Options : Weight: 3
+
+Description: Candidates should be able to configure a web server to provide HTTPS.
+
+Key Knowledge Areas:
+- SSL configuration files, tools and utilities
+- Generate a server private key and CSR for a commercial CA
+- Generate a self-signed Certificate
+- Install the key and certificate, including intermediate CAs
+- Configure Virtual Hosting using SNI
+- Awareness of the issues with Virtual Hosting and use of SSL
+- Security issues in SSL use, disable insecure protocols and ciphers
+
+Terms and Utilities:
+- Apache2 configuration files
+- /etc/ssl/, /etc/pki/
+- openssl, CA.pl
+- SSLEngine, SSLCertificateKeyFile, SSLCertificateFile
+- SSLCACertificateFile, SSLCACertificatePath
+- SSLProtocol, SSLCipherSuite, ServerTokens, ServerSignature, TraceEnable
+
+#
+# INSTALACAO
+#
+
+# atualizacao do gnu/debian
+$ sudo apt-get update && sudo apt-get upgrade
+
+# instalacao do apache2 e do modulo ssl
+$ sudo apt-get install apache2 openssl
+
+#
+# ativacao dos modulos
+#
+
+# ativar o modulo SSL do apache
+$ sudo a2enmod ssl
+
+# ativar o modulo default-ssl
+$ sudo a2ensite default-ssl
+
+# ativar o modulo de redirecionamento
+$ sudo a2enmod rewrite
+
+# reinicializar o apache2
+$ sudo systemctl restart apache2
+
+#
+# certificado
+#
+#
+# particula.key	- A chave privada
+# particula.csr	- O pedido de assinatura do certificação
+# particula.crt	- O certificado auto-assinado
+
+# criar o diretorio a onde sera armazenado o certificado
+$ sudo mkdir /etc/apache2/ssl
+$ sudo /etc/apache2/ssl
+
+# Geracao da chave privada (Private Key):
+$ sudo openssl genrsa -out particula.key 2048
+
+# Geracao do pedido de certificação (Certificate Signing Request)
+$ sudo openssl req -new -key particula.key -out particula.csr
+
+# Criacao de um certificado auto-assinado
+#
+# O pedido de certificado deveria ser enviado para a entidade 
+# certificadora, que devolveria o certificado assinado. Neste 
+# texto, o pedido de certificado sera usado para criar um 
+# certificado auto-assinado (Self-Signed Certificate) valido 
+# por 365 dias:
+#
+$ sudo openssl x509 -req -days 365 -in particula.csr -signkey particula.key -out particula.crt
+
+# alterando permissao
+$ sudo chmod 400 /etc/apache2/ssl/*
+
+#
+# dominio virtual
+#
+
+# arquivo de configurca
+$ sudo vi /etc/apache2/sites-enabled/particula.local.conf
+	# inicio da configuracao do virtualhost, HTTP
+	<VirtualHost *:80>
+		# dominio do dominio virtual
+	        ServerName particula.local
+
+		# alias do dominio virtual
+	        ServerAlias www.particula.local
+
+		# diretorio a onde fica armazenado o arquivos do site
+	        DocumentRoot /var/www/particula.local/html
+	
+		# redirecionamento do HTTP para o HTTPS
+	        Redirect permanent / https://www.particula.local/
+	</VirtualHost>
+
+	# inicio da configuracao do virtualhost, HTTPS
+	<VirtualHost *:443>
+		# nome do dominio virtual
+	        ServerName particula.local
+
+		# alias do dominio virtual
+	        ServerAlias www.particula.local
+
+		# e-mail do administrador do dominio virtual
+	        ServerAdmin webmaster@particula.local
+
+		# diretorio a onde fica armazenado os arquivos do site
+	        DocumentRoot /var/www/particula.local/html
+
+	        <Directory /var/www/particula.local/html>
+	                Options Indexes Includes FollowSymLinks MultiViews
+	                AllowOverride All
+	                Require all granted
+	                LimitRequestBody 512000
+	        </Directory>
+
+		# ativando a engine SSL
+	        SSLEngine on
+
+		# Certificados auto-assinados
+
+		# certificado
+	        SSLCertificateFile /etc/apache2/ssl/apache.crt
+
+		# chave privada
+	        SSLCertificateKeyFile /etc/apache2/ssl/apache.key
+
+		# arquivo de log
+	        ErrorLog ${APACHE_LOG_DIR}/particula.local-error.log
+	        CustomLog ${APACHE_LOG_DIR}/particual.local-access.log combined
+	</VirtualHost>
+
+# testando o arquivo de configuracao.
+$ sudo apache2ctl configtest
+
+# reinicializado o site para aplicar as configuracoes feitas.
+$ sudo systemctl restart apache2
+
+#
+# TESTE
+#
+
+# o comando abaixo deve ser executado no servidor https.
+$ sudo openssl s_client -connect www.particula.local:443 -status -servername www.particula.local
+
+#
+# SNI
+#
+
+# arquivo de configurca
+$ sudo vi /etc/apache2/sites-enabled/particula.local.conf
+	NameVirtualHost *:443
+
+	<VirtualHost *:443>
+		ServerName www.particula1.local
+		DocumentRoot /var/www/particula1.local/html
+		SSLEngine on
+	        SSLCertificateFile /etc/apache2/ssl/particula1.crt
+		SSLCertificateKeyFile /etc/apache2/ssl/particula1.key
+	</VirtualHost>
+
+	<VirtualHost *:443>
+		ServerName www.particula2.local
+		DocumentRoot /var/www/particula2.local/html
+		SSLEngine on
+	        SSLCertificateFile /etc/apache2/ssl/particula2.crt
+		SSLCertificateKeyFile /etc/apache2/ssl/particula2.key
+	</VirtualHost>

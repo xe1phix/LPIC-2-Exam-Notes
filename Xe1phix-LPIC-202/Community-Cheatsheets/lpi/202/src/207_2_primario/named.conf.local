@@ -1,0 +1,14 @@
+// Master zones
+zone "particula.local" {
+	type master;
+	file "db.particula.local";
+	allow-transfer { 192.168.0.6; };
+	notify yes;
+};
+
+// Reverse
+zone "0.168.192.in-addr.arpa" {
+	type master;
+	file "db.0.168.192.in-addr.arpa";
+	allow-transfer { 192.168.0.6; };
+};

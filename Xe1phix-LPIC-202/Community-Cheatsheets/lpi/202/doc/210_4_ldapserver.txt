@@ -1,0 +1,214 @@
+#: Title : openldap server configuration
+#: Author : "Caio Abreu Ferreira" <abreuferr_gmail.com>
+#: Description : openldap server configuration
+#: Options : Weight: 4
+
+Description: Candidates should be able to configure a 
+basic OpenLDAP server including knowledge of LDIF format 
+and essential access controls.
+
+Key Knowledge Areas:
+- OpenLDAP
+- Directory based configuration
+- Access Control
+- Distinguished Names
+- Changetype Operations
+- Schemas and Whitepages
+- Directories
+- Object IDs, Attributes and Classes
+
+Terms and Utilities:
+- slapd
+- slapd-config
+- LDIF
+- slapadd
+- slapcat
+- slapindex
+- /var/lib/ldap/
+- loglevel
+
+#
+# Teoria
+#
+
+Algumas das características do OpenLDAP, são:
+	Suporte a IPv4 e IPv6;
+	Encriptação SSL e TLS;
+	Autenticação (Digest-MD5, GSSAPI, Cyrus Sasl-Kerberos V);
+	Controle de acessos;
+	Replicação de base.
+
+O OpenLDAP conta com dois arquivos de configuração principais e um front-end de acesso:
+	"slapd.conf" - configuração do daemon;
+	"ldap.conf" - configuração para acesso dos clientes à base;
+	"ldapsearch" - utilitário em modo texto capaz de trabalhar com vários front-ends gráficos
+
+NSS - O NSS ou Name Service Switch é um serviço encarregado de realizar pesquisas em diferentes 
+bases de dados para resolução de nomes, como arquivos de configuração locais (/etc/passwd, /etc/group 
+e /etc/hosts), DNS, o Serviço de Informação de Rede (NIS) e o próprio LDAP. Ele é utilizado por outros 
+serviços para consulta de informações de usuários e grupos, entre outras informações da rede. 
+
+PAM - O PAM (Pluggable Authentication Modules) é um conjunto de bibliotecas/funções responsável por 
+fornecer um serviço de autenticação centralizada de usuários. 
+
+#
+# Instalacao
+#
+
+# atualizacao do debian
+$ sudo apt-get update && sudo apt-get upgrade
+
+# instalacao do servidor openldap
+$ sudo apt-get install slapd ldap-utils -y -d
+
+# pacote "ldap-utils" contém as seguintes ferramentas:
+	ldapsearch - pesquise e exiba entradas.
+	ldapmodify - modifica uma entrada.
+	ldapadd - adicione uma nova entrada.
+	ldapdelete - remover e entrar.
+	ldapmodrdn - renomeia uma entrada.
+	ldappasswd - altera uma senha.
+
+#
+# Configuracao
+#
+
+# reconfigurando o pacote slapd
+$ sudo dpkg-reconfigure slapd
+	Omit OpenLDAP server configuration? <NO>
+	DNS Domain Name: particula.local
+	Organization name: particula
+	Administrator password: <SENHA>
+	Confirm password: <SENHA>
+	Database backend to use: HDB
+	Do you want the database to be removed when slapd is purged? <NO>
+	Move old database? <YES>
+
+# verificando a existencia da base de dados LDAP
+$ sudo ldapsearch -x -b dc=particula,dc=local
+
+# visualizacao da estrutura inicial do openldap.
+$ sudo slapcat
+
+# banco de dados
+$ sudo cp /usr/share/doc/slapd/examples/DB_CONFIG /var/lib/ldap
+
+# backup do arquivo de configuracao
+$ sudo cp /etc/ldap/ldap.conf{,.origin}
+
+# configuracao do arquivo ldap.conf
+$ sudo vi /etc/ldap/ldap.conf
+	BASE    dc=particula,dc=local
+	URI     ldap://openldap.particula.local ldap://openldap.particula.local:666
+
+#
+# Organizational Unit
+#
+
+$ cat vi ou.ldif
+	dn: ou=People,dc=particula,dc=local
+	objectClass: organizationalUnit
+	ou: People
+
+	dn: ou=Groups,dc=particula,dc=local
+	objectClass: organizationalUnit
+	ou: Groups
+
+$ sudo ldapadd -D cn=admin,dc=particula,dc=local -W -f ou.ldif
+
+#
+# Usuario
+#
+
+# gerando o hash da senha do usuario admin/rootpw
+$ sudo slappasswd
+
+# ldif do usuario
+$  cat caio.ldif
+	dn: uid=caio,ou=People,dc=particula,dc=local
+	objectClass: inetOrgPerson
+	objectClass: posixAccount
+	objectClass: shadowAccount
+	cn: caio
+	sn: ferreira
+	userPassword: {SSHA}xxxxxxxxxxxxxxxx
+	loginShell: /bin/bash
+	uidNumber: 1000
+	gidNumber: 1000
+	homeDirectory: /home/caio
+
+	dn: cn=caio,ou=Groups,dc=particula,dc=local
+	objectClass: posixGroup
+	cn: caio
+	gidNumber: 1000
+	memberUid: caio
+
+# adicionar
+$ sudo ldapadd -x -D cn=admin,dc=particula,dc=local -W -f caio.ldif
+
+# apagar
+$ sudo ldapdelete "cn=caio,ou=users,dc=particula,dc=local" -D cn=admin,dc=particula,dc=local -W
+
+#
+# Grupo
+#
+
+# adicionar o usuario caio no grupo it
+$ cat group.ldif
+	dn: cn=it,ou=groups,dc=particula,dc=local
+	cn: it
+	objectClass: groupOfNames
+	member: cn=caio,ou=users,dc=particula,dc=local
+$ sudo ldapadd -D cn=admin,dc=particula,dc=local -W -f group.ldif
+
+#
+# Log
+#
+
+$ sudo vi /etc/rsyslog.conf
+	# Log OpenLDAP messages
+	local4.*                  /var/log/ldap.log
+
+$ sudo systemctl restart rsyslog slapd
+
+#
+# Backup
+#
+
+# comando utilizado para extrair/dump da base de dados do servidor ldap
+# para um arquivo ldif;
+$ sudo slapcat -v -l backup_ldap.ldif
+
+#
+# NSS
+#
+
+# instalacao
+$ sudo apt-get install ldap-client libnss-ldap
+
+# reconfiguracao da biblioteca libnss-ldap
+$ sudo dpkg-reconfigure libnss-ldap
+	- endereco IP do servidor LDAP
+	- DN - dc=particula,dc=local
+	- Versao do LDAP - 3
+	- Conta admin - cn=admin,dc=particula,dc=local
+	- Senha do admin - ****
+
+# reconfiguracao da biblioteca libpam-ldap
+$ sudo dpkg-reconfigure libpam-ldap
+	- endereco IP do servidor LDAP
+	- DN - dc=particula,dc=local
+	- Versao do LDAP - 3
+	- Admin e root - Sim
+	- Autenticacao na base de dados - Nao
+	- Conta admin - cn=admin,dc=particula,dc=local
+	- Senha do admin - ****
+	- Criptografar a base de dados - Nao
+	- Perfil - Create home directory on login	
+
+# PAM
+$ sudo vi /etc/pam.d/commom-account
+
+$ sudo vi /etc/pam.d/commom-auth
+
+$ sudo vi /etc/pam.d/common-password

@@ -1,0 +1,170 @@
+#: Title : E-Mail Services
+#: Author : "Caio Abreu Ferreira" <abreuferr_gmail.com>
+#: Description : Using e-mail servers
+#: Options : Weight: 2
+
+Description: Candidates should be able to install and configure POP and IMAP daemons.
+
+Key Knowledge Areas:
+- Dovecot IMAP and POP3 configuration and administration
+- Basic configuration for Dovecot
+- Awareness of Courier
+
+Terms and Utilities:
+- /etc/dovecot/
+- dovecot.conf
+- doveconf
+- doveadm
+
+#
+# SERVIDOR - INSTALCAO
+#
+
+# atualizacao do gnu/linux debian
+$ sudo apt-get update
+$ sudo apt-get upgrade -y -d
+
+# instalacao do dovecot
+$ sudo apt-get install dovecot-core dovecot-imapd dovecot-pop3d -y -d
+
+#
+# SERVIDOR - CONFIGURACAO
+#
+
+# copia de seguranca
+$ sudo cp /etc/postfix/main.cf{,.origin}
+
+# configurando o Postfix para trabalhar com o Dovecot.
+$ sudo vi /etc/postfix/main.cf
+	(...)
+	# SASL parameters
+	smtpd_sasl_auth_enable = yes
+	smtpd_sasl_type = dovecot
+	smtpd_sasl_path = private/auth
+	smtpd_sasl_authenticated_header = yes
+	smtpd_sasl_auth_enable = yes
+	broken_sasl_auth_clients = yes
+	(...)
+
+	# Seguranca
+
+	# Aceita conexao apenas a partir da rede 
+	# local ou usuarios autenticados
+	smtpd_client_restrictions = permit_mynetworks,
+        	                    permit_sasl_authenticated,
+                	            reject
+ 
+	# usuarios locais ou autenticados podem 
+	# enviar emails para qualquer endereco
+	# Rejeitar todos os outros
+	smtpd_recipient_restrictions = permit_mynetworks,
+        	                       permit_sasl_authenticated,
+                	               reject_unauth_destination
+
+# verificar o arquivo de configuracao do Postfix
+$ sudo postfix check
+
+# configuracao a conexao do Dovecot.
+$ sudo cp /etc/dovecot/dovecot.conf{,.backup}
+$ sudo vi /etc/dovecot/dovecot.conf
+	# lista de enderecos dos hosts que o dovecot
+	# deve permitir conexao.
+	listen = *, ::
+
+# configurando o processo de autenticacao no Dovecot.
+$ sudo cp /etc/dovecot/conf.d/10-auth.conf{,.backup}
+$ sudo vi /etc/dovecot/dovecot.conf
+$ sudo vi /etc/dovecot/conf.d/10-auth.conf
+	auth_mechanisms = plain login
+	disable_plaintext_auth = no
+
+# configurando o Maildir no Dovecot.
+$ sudo cp /etc/dovecot/conf.d/10-mail.conf{,.backup}
+$ sudo vi /etc/dovecot/conf.d/10-mail.conf
+	# indica a localizacao do mailbox do ususario.
+	mail_location = maildir:~/Maildir
+
+# configurando o Dovecot para trabalhar com o Postfix.
+$ sudo cp /etc/dovecot/conf.d/10-master.conf{,.backup}
+$ sudo vi /etc/dovecot/conf.d/10-master.conf
+	# imap
+	service imap-login {
+		inet_listener imap {
+			port = 143
+		}
+	}
+
+	# pop3
+	service pop3-login {
+		inet_listener pop3 {
+			port = 110
+		}
+	}
+
+	# autenticacao
+	service auth {
+		unix_listener /var/spool/postfix/private/auth {
+			mode = 0660
+			user = postfix
+			group = postfix
+		}
+	}
+
+# reinicializando o Postfix e o Dovecot
+$ sudo systemctl restart postfix.service
+$ sudo systemctl restart dovecot.service
+
+#
+# TESTE - DOVECOT
+#
+
+# teste dovecot imap
+$ telnet localhost 143
+	x1 LOGIN [USUARIO] [SENHA]
+	x2 LIST "" "*"
+	x3 SELECT Inbox
+	x4 LOGOUT
+
+# teste do dovecot imap
+$ telnet localhost 143
+	a login "[USUARIO]" "[SENHA]"
+	b select inbox
+	c list "" *
+	d lsub "" *
+	e logout
+
+#
+# ESTACAO
+#
+
+# instalacao do mutt
+$ sudo apt-get install mutt -y -d
+
+# configuracao do mutt
+$ vi .muttrc
+	set imap_user = "cosmo"
+	set imap_pass = "[SENHA]"
+
+	set smtp_url = "smtp://cosmo@email.particula.local:25/"
+	set smtp_pass = "[SENHA]"
+
+	set from = "cosmo@particula.local"
+	set realname = "caio ferreira"
+
+	set folder = "imap://email.particula.local:143"
+
+	set spoolfile = "+INBOX"
+	set postponed="+Drafts"
+
+#
+# SERVIDOR - DOVEADM
+#
+
+# exibe toda as variaveis de configuracao.
+$ sudo doveadm config
+
+# quais conexoes estao ativas no dovecot.
+$ sudo doveadm who
+
+# informacoes sobre usuario
+$ sudo doveadm user [USUARIO]

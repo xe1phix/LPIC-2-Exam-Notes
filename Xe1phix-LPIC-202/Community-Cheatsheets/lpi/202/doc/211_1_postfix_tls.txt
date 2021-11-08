@@ -1,0 +1,114 @@
+#: Title : E-Mail Services
+#: Author : "Caio Abreu Ferreira" <abreuferr_gmail.com>
+#: Description : Using e-mail servers
+#: Options : Weight: 4
+
+Description: Candidates should be able to manage an e-mail 
+server, including the configuration of e-mail aliases, e-mail 
+quotas and virtual e-mail domains. This objective includes 
+configuring internal e-mail relays and monitoring e-mail servers.
+
+Key Knowledge Areas:
+- Configuration files for postfix
+- Basic TLS configuration for postfix
+- Basic knowledge of the SMTP protocol
+- Awareness of sendmail and exim
+
+Terms and Utilities:
+- Configuration files and commands for postfix
+- /etc/postfix/
+- /var/spool/postfix/
+- sendmail emulation layer commands
+- /etc/aliases
+- mail-related logs in /var/log/
+
+#
+# ATUALIZACAO DA DISTRIBUICAO
+#
+
+# atualizacao do gnu/linux debian
+$ sudo apt-get update
+$ sudo apt-get upgrade -y -d
+
+#
+# POSTFIX
+#
+
+# instalacao do postfix
+$ sudo apt-get install postfix mailutils telnet -y -d
+
+# reconfigurando o postfix
+$ sudo dpkg-reconfigure postfix
+	General type of mail configuration? - internet site
+	System mail name - email.particula.local
+	Root and postmaster mail recipient - cosmo
+	Other destinations to accept mail for - $myhostname, email.particula.local, localhost.particula.local, , localhost
+	Force synchronous updates on mail queue? - <No>
+	Local networks - 127.0.0.0/8
+	Mailbox size limit - 0
+	Local address extension character - +
+	Internet protocols to use - all
+
+# configuracao Maildir
+$ sudo postconf -e 'home_mailbox = Maildir/'
+
+# configuracao Virtual
+$ sudo postconf -e 'virtual_alias_maps= hash:/etc/postfix/virtual'
+$ sudo vi /etc/postfix/virtual
+	cosmo@particula.local cosmo
+	support@particula.local cosmo
+	postmaster@particula.local cosmo
+	root@particula.local cosmo
+# comando utilizado para gerar o arquivo /etc/postfix/virtual.db
+$ sudo postmap /etc/postfix/virtual
+
+# reinicializando o servico do postfix
+$ sudo systemctl restart postfix.service
+
+#
+# TESTE
+#
+
+# teste do postfix.
+$ echo "Corpo do e-mail" | mail -s "Subject do e-mail" cosmo@particula.local
+
+# teste smtp
+$ telnet localhost 25
+	ehlo localhost
+	mail from: cosmo
+	rcpt to: cosmo
+	data
+	subject: teste dovecot
+	Mail body
+	.
+	quit
+
+#
+# CERTIFICADO DIGITAL
+#
+
+# criacao dos certificados
+$ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/particula.key -out /etc/ssl/certs/particula.pem
+
+#
+# POSTFIX + SSL
+#
+
+# arquivos de configuracao do postfix
+$ sudo vi /etc/postfix/main.cf
+	# Certificados auto-assinados
+	smtpd_tls_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+	smtpd_tls_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+
+	smtpd_use_tls=yes
+	smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
+	smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
+	smtp_tls_security_level = may
+	smtp_tls_loglevel = 1
+
+#
+# TESTE
+#
+
+# localhost
+$ openssl s_client -connect localhost:25 -starttls smtp

@@ -1,0 +1,14 @@
+// zona particula.local
+zone "particula.local" {
+	type slave;
+	file "db.particula.local";
+	masters { 192.168.0.5; };
+	allow-notify { 192.168.0.5; };
+};
+
+// dns reverso
+zone "0.168.192.in-addr.arpa" {
+	type slave;
+	file "db.0.168.192.in-addr.arpa";
+	masters { 192.168.0.5; };
+};

@@ -1,0 +1,142 @@
+#: Title : dns tsig
+#: Author : "Caio Abreu Ferreira" <abreuferr_gmail.com>
+#: Description : Securing a DNS server
+#: Options : Weight: 2
+
+Description: Candidates should be able to configure a DNS 
+server to run as a non-root user and run in a chroot jail. 
+This objective includes secure exchange of data between DNS servers.
+
+Key Knowledge Areas:
+- BIND 9 configuration files
+- Configuring BIND to run in a chroot jail
+- Split configuration of BIND using the forwarders statement
+- Configuring and using transaction signatures (TSIG)
+- Awareness of DNSSEC and basic tools
+- Awareness of DANE and related records
+
+Terms and Utilities:
+- /etc/named.conf
+- /etc/passwd
+- DNSSEC
+- dnssec-keygen
+- dnssec-signzone
+
+# TEORIA
+#
+# a funcao da tecnologia tsig eh a de prover a seguranca na comunicacao
+# entre os servidores de DNS responsaveis por uma zona. Alem da comunicao, 
+# a tecnologia tsig tambem eh utilizado na seguranca no processo de  
+# transferencia dos dados da zona do servidor primario para o servidor
+# secundario.
+
+#
+# CONFIGURACAO DO DNS PRIMARIO (NS1 - 192.168.0.5)
+#
+
+# criacao da chave de criptografia que sera utilizada na troca
+# de informacoes e configuracao entre os servidores master e 
+# slave.
+$ cd /etc/bind/
+$ dnssec-keygen -a [HMAC-MD5] -b [512] -n USER [particula_local]
+	-a especificar qual eh o algoritmo que sera utilizado para criar as chaves
+	-b especifica o tamanho da chave
+	-n especifica o tipo de chave
+
+# conteudo da chave privada
+$ sudo cat Kparticula_local.+157+11082.private
+	Private-key-format: v1.3
+	Algorithm: 157 (HMAC_MD5)
+	Key: xAl7QKgDoVWyoOV3fy84Xu6ayy/tHEFOVbHqYnemRnad5ByLeETJA4DVdQFkDmdboxc5id40VDI6PTtcnoWI3A==
+	Bits: AAA=
+	Created: 20190102190149
+	Publish: 20190102190149
+	Activate: 20190102190149
+
+$ sudo vi /etc/bind/named.conf.local
+	// define a chave utilizada para controlar e autenticar operacoes.
+	key "particula_local" {
+        	algorithm hmac-md5;
+	        secret "xAl7QKgDoVWyoOV3fy84Xu6ayy/tHEFOVbHqYnemRnad5ByLeETJA4DVdQFkDmdboxc5id40VDI6PTtcnoWI3A==";
+	};
+
+	// servidor slave
+	server 192.168.0.6 {
+        	keys { particula_local; };
+	};
+
+	// configuracao da zona particula.local
+	zone "particula.local" {
+        	type master;
+	        file "/etc/bind/db.particula.local";
+        	allow-update { key "particula_local"; };
+	        notify yes;
+	};
+
+	// configuracao do dns reverso da zona particula.local
+	zone "0.168.192.in-addr.arpa" {
+        	type master;
+	        file "/etc/bind/db.0.168.192.in-addr.arpa";
+        	allow-update { key "particula_local"; };
+	};
+
+# testar o arquivo de configuracao
+$ sudo named-checkconf /etc/bind/named.conf.options
+
+# relendo os arquivos de configuracao do bind.
+$ sudo rndc reload
+
+# visualizando log
+$ sudo cat /var/log/syslog
+Jun 10 22:04:53 ns1 named[756]: client 192.168.0.7#58421/key particula_local (particula.local): transfer of 'particula.local/IN': AXFR-style IXFR started: TSIG particula_local (serial 2019061009)
+Jun 10 22:04:53 ns1 named[756]: client 192.168.0.7#58421/key particula_local (particula.local): transfer of 'particula.local/IN': AXFR-style IXFR ended
+Jun 10 22:04:53 ns1 named[756]: client 192.168.0.7#53429/key particula_local (0.168.192.in-addr.arpa): transfer of '0.168.192.in-addr.arpa/IN': AXFR-style IXFR started: TSIG particula_local (serial 2019061009)
+Jun 10 22:04:53 ns1 named[756]: client 192.168.0.7#53429/key particula_local (0.168.192.in-addr.arpa): transfer of '0.168.192.in-addr.arpa/IN': AXFR-style IXFR ended
+
+#
+# CONFIGURACAO DO DNS SECUNDARIO (NS2 - 192.168.0.6)
+#
+
+$ sudo vi /etc/bind/named.conf.local
+	// chave de criptografia tsig gerada no servidor
+	// primario/master.
+	key "particula_local" {
+        	algorithm hmac-md5;
+	        secret "xAl7QKgDoVWyoOV3fy84Xu6ayy/tHEFOVbHqYnemRnad5ByLeETJA4DVdQFkDmdboxc5id40VDI6PTtcnoWI3A==";
+	};
+
+	// servidor master
+	server 192.168.0.5 {
+        	keys { particula_local; };
+	};
+
+	// configuracoes da zona particula.local
+	zone "particula.local" {
+        	type slave;
+	        file "/etc/bind/db.particula.local";
+        	masters { 192.168.0.5; };
+	        allow-transfer { key "particula_local"; };
+	};
+
+	// configuracao do dns reverso da zona particula.local
+	zone "0.168.192.in-addr.arpa" {
+        	type slave;
+	        file "/etc/bind/db.0.168.192.in-addr.arpa";
+        	masters { 192.168.0.5; };
+	        allow-transfer { key "particula_local"; };
+	};
+
+# testar o arquivo de configuracao
+$ sudo named-checkconf /etc/bind/named.conf.options
+
+# relendo os arquivos de configuracao do bind.
+$ sudo rndc reload
+
+# visualizando log
+$ sudo cat /var/log/syslog
+Jun 10 22:04:53 ns2 named[1411]: zone 0.168.192.in-addr.arpa/IN: notify from 192.168.0.6#59970: serial 2019061009
+Jun 10 22:04:53 ns2 named[1411]: zone 0.168.192.in-addr.arpa/IN: Transfer started.
+Jun 10 22:04:53 ns2 named[1411]: transfer of '0.168.192.in-addr.arpa/IN' from 192.168.0.6#53: connected using 192.168.0.7#53429
+Jun 10 22:04:53 ns2 named[1411]: zone 0.168.192.in-addr.arpa/IN: transferred serial 2019061009: TSIG 'particula_local'
+Jun 10 22:04:53 ns2 named[1411]: transfer of '0.168.192.in-addr.arpa/IN' from 192.168.0.6#53: Transfer status: success
+Jun 10 22:04:53 ns2 named[1411]: transfer of '0.168.192.in-addr.arpa/IN' from 192.168.0.6#53: Transfer completed: 1 messages, 8 records, 329 bytes, 0.001 secs (329000 bytes/sec)
